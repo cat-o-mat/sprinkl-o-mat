@@ -3,7 +3,6 @@
 import RPi.GPIO as GPIO
 import time
 import spidev
-import os
 import time
 
 VARS = {
