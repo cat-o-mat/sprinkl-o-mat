@@ -1,16 +1,31 @@
 #!/usr/bin/python
-
+import mysql.connector as DB
+from mysql.connector import Error
 import RPi.GPIO as GPIO
 import time
 import spidev
-import time
+from datetime import date, datetime
 
+# Customizing the settings of the irrigation system
 VARS = {
-        "MOISTURE_THRESHOLD": 430,
+        "MOISTURE_THRESHOLD": 480,
         "MOISTURE_CHANNEL": 0,
         "WATER_PUMP_GPIO": 17,
         "WATERING_TIME_IN_S": 1
         }
+
+# List of all moisture sensores in use
+MOISTURESENSORS = {
+        "DEFAULT": 1
+        }
+
+# Read data to connect to the DB
+f = open("pass", "r")
+host = f.readline().rstrip("\n")
+db = f.readline().rstrip("\n")
+user = f.readline().rstrip("\n")
+dbPass = f.readline().rstrip("\n")
+f.close()
 
 roundTo = 2
 
@@ -23,21 +38,12 @@ def readSpi(channel):
   data = ((val[1]&3) << 8) + val[2]
   return data
 
-def getVolts(data):
-  volts = (data * 3.3) / float(1023)
-  volts = round(volts,roundTo)
-  return volts
-
 # Dry:   >430
 # Wet:   430-350
 # Water: <350
 def needWater():
-
     moisture_level = readSpi(VARS["MOISTURE_CHANNEL"])
-    moisture_volts = getVolts(moisture_level)
-
-    print("Moisture: Raw: {}, Volt: {}".format(moisture_level,moisture_volts))
-    
+    logToDB(MOISTURESENSORS["DEFAULT"], moisture_level)
     return (moisture_level >= VARS["MOISTURE_THRESHOLD"])
 
 def waterPlants():
@@ -51,5 +57,30 @@ def waterPlants():
       GPIO.setup(VARS["WATER_PUMP_GPIO"], GPIO.IN)
     else:
         print("No need to water plants.")
+
+def logToDB(moistureSensorId, moisture): 
+    try:
+        connection = DB.connect(
+                host=host,
+                database=db,
+                user=user,
+                password=dbPass
+                )
+
+        if connection.is_connected():
+          cursor = connection.cursor()
+          query = "INSERT INTO irrigationsys (moistureSensorId, timedate, moisture) VALUES (%s, %s, %s)"
+          data = (moistureSensorId, datetime.now(), moisture)
+          cursor.execute(query, data)
+          connection.commit()
+              
+    except Error as e:
+        print("TODO: Log error " + e)
+
+    finally:
+        if (connection.is_connected()):
+          connection.close()
+          print("MySQL connection is closed")
+
 
 waterPlants()
