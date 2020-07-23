@@ -5,6 +5,9 @@ import RPi.GPIO as GPIO
 import time
 import spidev
 from datetime import date, datetime
+import logging
+
+logging.basicConfig(filename='errors.log', format='%(asctime)s - %(message)s')
 
 # Customizing the settings of the irrigation system
 VARS = {
@@ -59,6 +62,8 @@ def waterPlants():
         print("No need to water plants.")
 
 def logToDB(moistureSensorId, moisture): 
+    connection = None
+    
     try:
         connection = DB.connect(
                 host=host,
@@ -75,10 +80,10 @@ def logToDB(moistureSensorId, moisture):
           connection.commit()
               
     except Error as e:
-        print("TODO: Log error " + e)
+        logging.error(e)
 
     finally:
-        if (connection.is_connected()):
+        if (connection != None and connection.is_connected()):
           connection.close()
           print("MySQL connection is closed")
 
