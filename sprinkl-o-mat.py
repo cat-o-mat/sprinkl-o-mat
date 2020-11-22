@@ -44,13 +44,13 @@ def readSpi(channel):
 # Dry:   >430
 # Wet:   430-350
 # Water: <350
-def needWater():
+def needsWater():
     moisture_level = readSpi(VARS["MOISTURE_CHANNEL"])
     logToDB(MOISTURESENSORS["DEFAULT"], moisture_level)
     return (moisture_level >= VARS["MOISTURE_THRESHOLD"])
 
 def waterPlants():
-    if needWater():
+    if needsWater():
       GPIO.setmode(GPIO.BCM)
       GPIO.setup(VARS["WATER_PUMP_GPIO"], GPIO.OUT)
       GPIO.output(VARS["WATER_PUMP_GPIO"], GPIO.LOW)
